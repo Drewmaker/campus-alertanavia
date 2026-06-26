@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Campus Alertanavia — Asistencia</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.7.0/dist/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f0;min-height:100vh}
+.app{max-width:480px;margin:0 auto;min-height:100vh;background:#f0f2f0}
+.header{background:#1a5c2a;color:white;padding:12px 14px 8px;position:sticky;top:0;z-index:10}
+.header-top{display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:15px;font-weight:600;letter-spacing:.02em}
+.header .subtitle{font-size:11px;opacity:.7;margin-top:2px}
+.header-add{background:rgba(255,255,255,.2);border:none;color:white;width:32px;height:32px;border-radius:50%;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.week-bar{background:#155222;padding:6px 12px;display:flex;gap:6px;align-items:center}
+.week-label{font-size:11px;color:rgba(255,255,255,.6);margin-right:2px;white-space:nowrap}
+.week-btn{flex:1;padding:5px 4px;font-size:12px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:transparent;color:rgba(255,255,255,.75);cursor:pointer;font-family:inherit;text-align:center;transition:all .15s}
+.week-btn.active{background:white;color:#1a5c2a;border-color:white;font-weight:700}
+.home-scanner{background:white;border-bottom:1px solid #e8ebe8;padding:10px 12px}
+.home-scanner-row{display:flex;gap:8px;align-items:center}
+.home-scanner-row input{flex:1;padding:10px 12px;font-size:16px;font-family:'Courier New',monospace;border:1px solid #d5d8d5;border-radius:10px;background:#f7f9f7;color:#111;outline:none;transition:border-color .15s}
+.home-scanner-row input:focus{border-color:#1a5c2a;background:white}
+.home-scan-btn{padding:10px 14px;background:#1a5c2a;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.scan-result{margin-top:8px;padding:10px 12px;border-radius:9px;font-size:13px;line-height:1.5;display:none}
+.scan-ok{background:#eaf5ec;color:#1a5c2a}
+.scan-err{background:#fdecea;color:#c0392b}
+.scan-warn{background:#fff8e1;color:#b7680a}
+.stats-bar{display:flex;gap:5px;padding:8px 10px;background:white;border-bottom:1px solid #e8ebe8}
+.stat{flex:1;text-align:center;padding:5px 2px;border-radius:8px}
+.stat .n{font-size:20px;font-weight:700;line-height:1}
+.stat .l{font-size:9px;color:#888;margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.stat.total .n{color:#222}
+.stat.dentro .n{color:#1a5c2a}
+.stat.fuera .n{color:#c0392b}
+.stat.pte .n{color:#e67e22}
+.stat.ausente .n{color:#9b59b6}
+.toolbar{padding:8px 12px;background:white;border-bottom:1px solid #e8ebe8;display:flex;flex-direction:column;gap:7px}
+.search-wrap{position:relative}
+.search-wrap input{width:100%;padding:9px 12px 9px 36px;font-size:15px;border:1px solid #d5d8d5;border-radius:10px;background:#f7f9f7;color:#111;outline:none;transition:border-color .15s}
+.search-wrap input:focus{border-color:#1a5c2a;background:white}
+.search-wrap .si{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:17px;color:#888}
+.filters{display:flex;gap:5px;flex-wrap:wrap}
+.filter-btn{padding:5px 10px;font-size:11px;border-radius:20px;border:1px solid #d5d8d5;background:transparent;color:#666;cursor:pointer;transition:all .15s;font-family:inherit}
+.filter-btn.active{background:#1a5c2a;color:white;border-color:#1a5c2a}
+.player-list{padding:8px 12px 40px;display:flex;flex-direction:column;gap:5px}
+.player-card{background:white;border-radius:12px;border:1px solid #e8ebe8;padding:10px 12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px}
+.player-card:active{transform:scale(.99)}
+.player-card.has-note{border-left:3px solid #e67e22}
+.player-card.status-dentro{border-left:3px solid #1a5c2a}
+.player-card.status-fuera{border-left:3px solid #c0392b}
+.player-card.status-ausente{border-left:3px solid #9b59b6;opacity:.75}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.av-out{background:#fdecea;color:#c0392b}
+.av-in{background:#eaf5ec;color:#1a5c2a}
+.av-none{background:#f0f2f0;color:#888}
+.av-abs{background:#f3e8ff;color:#9b59b6}
+.player-info{flex:1;min-width:0}
+.player-name{font-size:13px;font-weight:600;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-meta{font-size:11px;color:#888;margin-top:2px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.qr-id{font-family:'Courier New',monospace;font-size:10px;background:#f0f2f0;padding:1px 5px;border-radius:4px;color:#555}
+.alerg-tag{color:#c0392b;font-size:10px;font-weight:700}
+.week-tags{display:flex;gap:3px}
+.week-tag{font-size:10px;padding:1px 5px;border-radius:4px;font-weight:600}
+.wt1{background:#e3f0ff;color:#1a6abf}
+.wt2{background:#fff0d4;color:#b76b00}
+.wt3{background:#f0e8ff;color:#7b3fb5}
+.status-badge{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;flex-shrink:0}
+.sb-in{background:#eaf5ec;color:#1a5c2a}
+.sb-out{background:#fdecea;color:#c0392b}
+.sb-none{background:#f0f2f0;color:#888}
+.sb-abs{background:#f3e8ff;color:#9b59b6}
+.empty-msg{text-align:center;padding:40px 16px;color:#aaa;font-size:14px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.sheet{background:white;border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:0 0 24px;max-height:92vh;overflow-y:auto}
+.sheet-handle{width:36px;height:4px;background:#d5d8d5;border-radius:2px;margin:12px auto 14px}
+.sheet-title{font-size:16px;font-weight:600;padding:0 18px 12px;border-bottom:1px solid #e8ebe8;color:#111}
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px}
+.action-btn{padding:12px 8px;border-radius:12px;border:1px solid #d5d8d5;background:#f7f9f7;cursor:pointer;text-align:center;transition:all .15s;font-family:inherit}
+.action-btn:active{transform:scale(.97)}
+.action-btn.primary{background:#1a5c2a;border-color:#1a5c2a}
+.action-btn.danger{background:#fdecea;border-color:#f5b7b1}
+.action-btn.warn{background:#fff8e1;border-color:#f9d77a}
+.action-btn .ab-icon{font-size:22px;display:block;margin-bottom:3px;color:#444}
+.action-btn .ab-label{font-size:12px;font-weight:600;color:#444}
+.action-btn.primary .ab-icon,.action-btn.primary .ab-label{color:white}
+.action-btn.danger .ab-label,.action-btn.danger .ab-icon{color:#c0392b}
+.action-btn.warn .ab-label,.action-btn.warn .ab-icon{color:#b76b00}
+.action-btn .ab-sub{font-size:10px;color:#888;margin-top:2px}
+.action-btn.primary .ab-sub{color:rgba(255,255,255,.65)}
+.action-btn.danger .ab-sub,.action-btn.warn .ab-sub{color:inherit;opacity:.7}
+.week-picker{display:flex;gap:6px;padding:4px 0}
+.week-pick-btn{flex:1;padding:7px 4px;font-size:12px;border:1px solid #d5d8d5;border-radius:8px;background:white;cursor:pointer;font-family:inherit;color:#555;text-align:center;transition:all .15s;font-weight:500}
+.week-pick-btn.s1.on{background:#1a6abf;color:white;border-color:#1a6abf}
+.week-pick-btn.s2.on{background:#b76b00;color:white;border-color:#b76b00}
+.week-pick-btn.s3.on{background:#7b3fb5;color:white;border-color:#7b3fb5}
+.section-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;padding:0 18px 5px;margin-top:6px}
+.timeline{padding:3px 18px 8px;display:flex;flex-direction:column;gap:6px}
+.tl-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.tl-in{background:#1a5c2a}
+.tl-out{background:#c0392b}
+.tl-abs{background:#9b59b6}
+.tl-time{color:#888;font-family:'Courier New',monospace;font-size:11px;min-width:40px}
+.tl-desc{color:#333}
+.tl-tag{font-size:9px;background:#f0f2f0;color:#888;padding:1px 5px;border-radius:4px;margin-left:3px}
+.field-row{padding:5px 18px;display:flex;flex-direction:column;gap:3px}
+.field-row label{font-size:11px;color:#888;font-weight:500}
+.field-row input,.field-row textarea,.field-row select{width:100%;padding:9px 11px;font-size:14px;border:1px solid #d5d8d5;border-radius:9px;background:#f7f9f7;color:#111;font-family:inherit;resize:none;outline:none;transition:border-color .15s}
+.field-row input:focus,.field-row textarea:focus,.field-row select:focus{border-color:#1a5c2a;background:white}
+.field-row textarea{min-height:66px}
+.save-btn{display:block;margin:12px 18px 6px;width:calc(100% - 36px);padding:13px;background:#1a5c2a;color:white;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s}
+.close-btn{display:block;margin:0 18px;width:calc(100% - 36px);padding:11px;background:transparent;color:#888;border:1px solid #d5d8d5;border-radius:10px;font-size:14px;cursor:pointer;font-family:inherit}
+.delete-btn{display:block;margin:8px 18px 0;width:calc(100% - 36px);padding:11px;background:#fff0f0;color:#c0392b;border:1px solid #fcc;border-radius:10px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#222;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.add-sheet-hint{font-size:12px;color:#888;padding:6px 18px 0;line-height:1.5}
+.solo-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:600;background:#e8f4fd;color:#1565c0;border:1px solid #b3d4f5;flex-shrink:0}
+.solo-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;cursor:pointer;border-top:1px solid #f0f0f0;border-bottom:1px solid #f0f0f0;margin:4px 0}
+.solo-toggle-label{font-size:13px;color:#333;display:flex;align-items:center;gap:8px;flex:1}
+.solo-switch{width:44px;height:26px;border-radius:13px;border:none;cursor:pointer;transition:background .2s;position:relative;flex-shrink:0;outline:none}
+.solo-switch.on{background:#1565c0}.solo-switch.off{background:#ccc}
+.solo-switch::after{content:'';position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:white;transition:left .2s}
+.solo-switch.on::after{left:21px}.solo-switch.off::after{left:3px}
+.conn-indicator{display:flex;align-items:center;gap:5px;font-size:11px;opacity:.8;margin-top:3px}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:#4caf50}
+.conn-dot.off{background:#f44336}.conn-dot.wait{background:#ff9800}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1><i class="ti ti-shield-check" style="font-size:14px;margin-right:5px;vertical-align:-1px"></i>Campus Alertanavia 2025</h1>
+        <div class="subtitle" id="header-subtitle">Semana 1 · control de asistencia</div>
+        <div class="conn-indicator"><div class="conn-dot wait" id="conn-dot"></div><span id="conn-label">conectando...</span></div>
+      </div>
+      <button class="header-add" onclick="openAdd()" title="Añadir jugador"><i class="ti ti-plus"></i></button>
+    </div>
+  </div>
+  <div class="week-bar">
+    <span class="week-label">Semana:</span>
+    <button class="week-btn active" data-w="1" onclick="setWeek(1)">Sem 1</button>
+    <button class="week-btn" data-w="2" onclick="setWeek(2)">Sem 2</button>
+    <button class="week-btn" data-w="3" onclick="setWeek(3)">Sem 3</button>
+  </div>
+  <div class="home-scanner">
+    <div class="home-scanner-row">
+      <input type="number" id="home-qr-input" placeholder="Nº pulsera / QR…" min="1" max="999" autocomplete="off"/>
+      <button class="home-scan-btn" onclick="homeScan()"><i class="ti ti-qrcode" style="font-size:16px"></i> Registrar</button>
+    </div>
+    <div class="scan-result" id="home-scan-result"></div>
+  </div>
+  <div class="stats-bar">
+    <div class="stat total"><div class="n" id="st-total">0</div><div class="l">Esta sem</div></div>
+    <div class="stat dentro"><div class="n" id="st-in">0</div><div class="l">Dentro</div></div>
+    <div class="stat fuera"><div class="n" id="st-out">0</div><div class="l">Fuera</div></div>
+    <div class="stat pte"><div class="n" id="st-pte">0</div><div class="l">Pendiente</div></div>
+    <div class="stat ausente"><div class="n" id="st-abs">0</div><div class="l">Avisado</div></div>
+  </div>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <i class="ti ti-search si"></i>
+      <input type="text" id="search-input" placeholder="Buscar nombre o QR…" autocomplete="off" autocorrect="off"/>
+    </div>
+    <div class="filters">
+      <button class="filter-btn active" data-filter="todos" onclick="setFilter('todos')">Todos</button>
+      <button class="filter-btn" data-filter="dentro" onclick="setFilter('dentro')">✓ Dentro</button>
+      <button class="filter-btn" data-filter="fuera" onclick="setFilter('fuera')">✗ Fuera</button>
+      <button class="filter-btn" data-filter="pendiente" onclick="setFilter('pendiente')">⏳ Pendiente</button>
+      <button class="filter-btn" data-filter="ausente" onclick="setFilter('ausente')">🟣 Avisado</button>
+      <button class="filter-btn" data-filter="notas" onclick="setFilter('notas')">⚠ Alertas</button>
+      <button class="filter-btn" data-filter="solo" onclick="setFilter('solo')">&#x1F6B6; Sale solo</button>
+      <button class="filter-btn" data-filter="sinfotos" onclick="setFilter('sinfotos')">&#x1F4F7;&#x2717; Sin fotos</button>
+      <button class="filter-btn" data-filter="pendform" onclick="setFilter('pendform')">&#x23F3; Sin formulario</button>
+    </div>
+  </div>
+  <div class="player-list" id="player-list"></div>
+</div>
+
+<div class="overlay" id="overlay-player" onclick="handleOverlayClick(event,'overlay-player')">
+  <div class="sheet" id="sheet-player">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheet-player-title"></div>
+    <div id="sheet-player-content"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-add" onclick="handleOverlayClick(event,'overlay-add')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title"><i class="ti ti-user-plus" style="font-size:15px;margin-right:6px;vertical-align:-1px"></i>Añadir jugador</div>
+    <p class="add-sheet-hint">El ID QR se asignará automáticamente.</p>
+    <div class="field-row" style="margin-top:8px">
+      <label>Nombre completo *</label>
+      <input type="text" id="add-name" placeholder="Nombre Apellido"/>
+    </div>
+    <div class="field-row">
+      <label>Semanas que asiste *</label>
+      <div class="week-picker">
+        <button class="week-pick-btn s1" id="add-w1" onclick="toggleAddWeek(1)">Semana 1</button>
+        <button class="week-pick-btn s2" id="add-w2" onclick="toggleAddWeek(2)">Semana 2</button>
+        <button class="week-pick-btn s3" id="add-w3" onclick="toggleAddWeek(3)">Semana 3</button>
+      </div>
+    </div>
+    <div class="field-row">
+      <label>Talla camiseta</label>
+      <input type="text" id="add-talla" placeholder="XS, S, M, L…"/>
+    </div>
+    <div class="field-row">
+      <label>Talla pantalón</label>
+      <input type="text" id="add-pantalon" placeholder="XS, S, M, L…"/>
+    </div>
+    <div class="field-row">
+      <label>Alergias / necesidades médicas</label>
+      <input type="text" id="add-alergias" placeholder="Frutos secos, lactosa…"/>
+    </div>
+    <div class="field-row">
+      <label>Teléfono de urgencia</label>
+      <input type="tel" id="add-tel" placeholder="6XX XXX XXX"/>
+    </div>
+    <div class="field-row">
+      <label>Email familia</label>
+      <input type="email" id="add-email" placeholder="email@ejemplo.com"/>
+    </div>
+    <div class="field-row">
+      <label>Notas</label>
+      <textarea id="add-nota" placeholder="Observaciones…"></textarea>
+    </div>
+    <button class="save-btn" onclick="saveNewPlayer()"><i class="ti ti-user-plus" style="font-size:15px;margin-right:6px;vertical-align:-2px"></i>Añadir jugador</button>
+    <button class="close-btn" onclick="closeAdd()" style="margin-top:6px">Cancelar</button>
+    <div style="height:12px"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+const SUPABASE_URL='https://yjjyklmbhddcmphcygdu.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqanlrbG1iaGRkY21waGN5Z2R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NTYwODUsImV4cCI6MjA5ODAzMjA4NX0.mCZHQYGPrhPeLIoAhI13zrLNCasb6IDEbUhFsuTZ2aE';
+
+async function sbGet(t,q=''){const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?${q}`,{headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});return r.json()}
+async function sbPost(t,b){const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}`,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(b)});return r.json()}
+async function sbPatch(t,match,b){const p=Object.entries(match).map(([k,v])=>`${k}=eq.${v}`).join('&');const r=await fetch(`${SUPABASE_URL}/rest/v1/${t}?${p}`,{method:'PATCH',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(b)});return r.json()}
+async function sbUpsert(t,b,oc=''){const u=`${SUPABASE_URL}/rest/v1/${t}${oc?'?on_conflict='+oc:''}`;const r=await fetch(u,{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(b)});return r.json()}
+async function sbDelete(t,match){const p=Object.entries(match).map(([k,v])=>`${k}=eq.${v}`).join('&');return fetch(`${SUPABASE_URL}/rest/v1/${t}?${p}`,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}})}
+
+const state={players:[],statuses:{},week:1,filter:'todos',search:'',activePlayer:null,loading:true};
+const addWeeksSet=new Set();
+
+function getInitials(n){return n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase()}
+function nowTime(){return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
+function pad3(v){return String(v).padStart(3,'0')}
+function sKey(pid,sem){return pid+'_'+sem}
+function getStatus(pid,sem){return state.statuses[sKey(pid,sem)]||{status:'pendiente',ausente_motivo:''}}
+
+async function loadData(){
+  setConn('wait');
+  try{
+    const[players,statuses]=await Promise.all([sbGet('players','order=name'),sbGet('player_status','select=*')]);
+    if(!Array.isArray(players))throw new Error('fail');
+    state.players=players.map(p=>({...p,semanas:p.semanas||[],soloPorSuCuenta:p.solo_por_su_cuenta,autPlaya:p.aut_playa,autPiscina:p.aut_piscina,autFotos:p.aut_fotos,formPendiente:p.form_pendiente}));
+    state.statuses={};
+    (statuses||[]).forEach(s=>{state.statuses[sKey(s.player_id,s.semana)]=s});
+    state.loading=false;setConn('on');render();subscribeRT();
+  }catch(e){setConn('off');showToast('Error al conectar');console.error(e)}
+}
+
+function setConn(st){
+  const d=document.getElementById('conn-dot'),l=document.getElementById('conn-label');
+  if(!d)return;
+  d.className='conn-dot'+(st==='on'?'':st==='off'?' off':' wait');
+  l.textContent=st==='on'?'conectado':st==='off'?'sin conexión':'conectando...';
+}
+
+function subscribeRT(){
+  const wsUrl=SUPABASE_URL.replace('https://','wss://')+'/realtime/v1/websocket?apikey='+SUPABASE_KEY+'&vsn=1.0.0';
+  try{
+    const ws=new WebSocket(wsUrl);
+    ws.onopen=()=>{
+      ws.send(JSON.stringify({topic:'realtime:public:player_status',event:'phx_join',payload:{},ref:'1'}));
+    };
+    ws.onmessage=(e)=>{
+      const msg=JSON.parse(e.data);
+      if((msg.event==='INSERT'||msg.event==='UPDATE')&&msg.topic.includes('player_status')){
+        const rec=msg.payload?.record;
+        if(rec){state.statuses[sKey(rec.player_id,rec.semana)]=rec;render();}
+      }
+    };
+    ws.onerror=()=>setConn('off');
+    ws.onclose=()=>{setConn('off');setTimeout(subscribeRT,5000)};
+  }catch(e){console.warn('RT fail',e)}
+}
+
+function setWeek(w){state.week=w;document.querySelectorAll('.week-btn').forEach(b=>b.classList.toggle('active',+b.dataset.w===w));document.getElementById('header-subtitle').textContent='Semana '+w+' · control de asistencia';render()}
+function setFilter(f){state.filter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.filter===f));render()}
+
+function updateStats(){
+  const w=state.week,inW=state.players.filter(p=>p.semanas.includes(w));
+  document.getElementById('st-total').textContent=inW.length;
+  document.getElementById('st-in').textContent=inW.filter(p=>getStatus(p.id,w).status==='dentro').length;
+  document.getElementById('st-out').textContent=inW.filter(p=>getStatus(p.id,w).status==='fuera').length;
+  document.getElementById('st-pte').textContent=inW.filter(p=>getStatus(p.id,w).status==='pendiente').length;
+  document.getElementById('st-abs').textContent=inW.filter(p=>getStatus(p.id,w).status==='ausente').length;
+}
+
+function filteredPlayers(){
+  const w=state.week;
+  let list=state.players.filter(p=>p.semanas.includes(w));
+  const q=state.search.toLowerCase().trim();
+  if(q)list=list.filter(p=>p.name.toLowerCase().includes(q)||p.id.toLowerCase().includes(q));
+  if(state.filter==='dentro')list=list.filter(p=>getStatus(p.id,w).status==='dentro');
+  else if(state.filter==='fuera')list=list.filter(p=>getStatus(p.id,w).status==='fuera');
+  else if(state.filter==='pendiente')list=list.filter(p=>getStatus(p.id,w).status==='pendiente');
+  else if(state.filter==='ausente')list=list.filter(p=>getStatus(p.id,w).status==='ausente');
+  else if(state.filter==='notas')list=list.filter(p=>p.nota||p.alergias);
+  else if(state.filter==='solo')list=list.filter(p=>p.soloPorSuCuenta);
+  else if(state.filter==='sinfotos')list=list.filter(p=>p.autFotos===false);
+  else if(state.filter==='pendform')list=list.filter(p=>p.formPendiente);
+  return list;
+}
+
+function render(){
+  if(state.loading){document.getElementById('player-list').innerHTML='<div class="empty-msg"><i class="ti ti-loader" style="font-size:32px;display:block;margin-bottom:8px;opacity:.3;animation:spin 1s linear infinite"></i>Cargando...</div>';return}
+  updateStats();
+  const list=filteredPlayers(),el=document.getElementById('player-list'),w=state.week;
+  if(!list.length){el.innerHTML='<div class="empty-msg"><i class="ti ti-search" style="font-size:32px;display:block;margin-bottom:8px;opacity:.3"></i>Sin resultados</div>';return}
+  el.innerHTML=list.map(p=>{
+    const st=getStatus(p.id,w).status;
+    const hasAlert=p.nota||p.alergias;
+    const avC=st==='dentro'?'av-in':st==='fuera'?'av-out':st==='ausente'?'av-abs':'av-none';
+    const sbC=st==='dentro'?'sb-in':st==='fuera'?'sb-out':st==='ausente'?'sb-abs':'sb-none';
+    const sbL=st==='dentro'?'&#x2713; Dentro':st==='fuera'?'&#x2717; Fuera':st==='ausente'?'&#x1F7E3; Avisado':'&mdash; Pendiente';
+    const border=hasAlert&&st==='pendiente'?'has-note':st!=='pendiente'?'status-'+st:'';
+    const alertI=hasAlert?'<i class="ti ti-alert-circle" style="font-size:11px;color:#e67e22;margin-left:3px;vertical-align:-1px"></i>':'';
+    const alergT=p.alergias?'<span class="alerg-tag">&#x26A0; '+p.alergias+'</span>':'';
+    const fotosT=p.autFotos===false?'<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:#fdecea;color:#c0392b;font-weight:600">&#x1F4F7;&#x2717;</span>':'';
+    const pendT=p.formPendiente?'<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:#fff8e1;color:#b7680a;font-weight:600">&#x23F3;</span>':'';
+    const soloT=p.soloPorSuCuenta?'<span class="solo-badge"><i class="ti ti-walk" style="font-size:11px"></i>Sale solo</span>':'';
+    const wTags='<span class="week-tags">'+p.semanas.map(s=>'<span class="week-tag wt'+s+'">S'+s+'</span>').join('')+'</span>';
+    return '<div class="player-card '+border+'" onclick=\"openPlayer(\'+p.id+\')\">'+
+      '<div class="avatar '+avC+'">'+getInitials(p.name)+'</div>'+
+      '<div class="player-info">'+
+        '<div class="player-name">'+p.name+alertI+'</div>'+
+        '<div class="player-meta"><span class="qr-id">'+p.id+'</span>'+wTags+alergT+fotosT+pendT+soloT+'</div>'+
+      '</div><span class="status-badge '+sbC+'">'+sbL+'</span></div>';
+  }).join('');
+}
+
+async function openPlayer(id){
+  const p=state.players.find(x=>x.id===id);
+  if(!p)return;
+  state.activePlayer=id;
+  const hasAlert=p.nota||p.alergias;
+  const aB=hasAlert?'<span style="margin-left:8px;font-size:11px;background:#fff3e0;color:#e67e22;padding:2px 7px;border-radius:10px;font-weight:600">&#x26A0; Alerta</span>':'';
+  document.getElementById('sheet-player-title').innerHTML='<i class="ti ti-user" style="font-size:14px;margin-right:5px;vertical-align:-1px"></i>'+p.name+aB;
+  renderPlayerSheet(p,[]);
+  document.getElementById('overlay-player').classList.add('open');
+  loadPlayerLog(p);
+}
+
+async function loadPlayerLog(p){
+  const logs=await sbGet('attendance','player_id=eq.'+p.id+'&semana=eq.'+state.week+'&order=recorded_at.desc&limit=20');
+  if(state.activePlayer===p.id)renderPlayerSheet(p,Array.isArray(logs)?logs:[]);
+}
+
+function authBadges(p){
+  var s='<div class="section-label" style="margin-top:8px">Autorización actividades</div><div style="padding:4px 18px 10px;display:flex;gap:6px;flex-wrap:wrap">';
+  if(p.formPendiente){s+='<span style="font-size:11px;padding:4px 9px;border-radius:10px;background:#fff8e1;color:#b7680a;font-weight:600">&#x23F3; Formulario pendiente</span>';}
+  else{
+    var b1=p.autPlaya===false?'#fdecea;color:#c0392b':'#eaf5ec;color:#1a5c2a';
+    var b2=p.autPiscina===false?'#fdecea;color:#c0392b':'#eaf5ec;color:#1a5c2a';
+    var b3=p.autFotos===false?'#fdecea;color:#c0392b':'#eaf5ec;color:#1a5c2a';
+    s+='<span style="font-size:11px;padding:4px 9px;border-radius:10px;font-weight:600;background:'+b1+'">'+(p.autPlaya===false?'&#x274C;':'&#x2705;')+' Playa</span>';
+    s+='<span style="font-size:11px;padding:4px 9px;border-radius:10px;font-weight:600;background:'+b2+'">'+(p.autPiscina===false?'&#x274C;':'&#x2705;')+' Piscina</span>';
+    s+='<span style="font-size:11px;padding:4px 9px;border-radius:10px;font-weight:600;background:'+b3+'">'+(p.autFotos===false?'&#x274C;':'&#x2705;')+' Fotos</span>';
+  }
+  return s+'</div>';
+}
+
+function renderPlayerSheet(p,logs){
+  const w=state.week,st=getStatus(p.id,w).status;
+  const logH=logs.length?logs.map(function(l){
+    const t=new Date(l.recorded_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    return '<div class="tl-item"><div class="tl-dot '+(l.type==='entrada'?'tl-in':l.type==='salida'?'tl-out':'tl-abs')+'"></div><span class="tl-time">'+t+'</span><span class="tl-desc">'+(l.type==='entrada'?'Entrada':l.type==='salida'?'Salida':'Ausencia')+'</span><span class="tl-tag">'+(l.manual?'manual':'QR')+'</span></div>';
+  }).join(''):'<p style="font-size:12px;color:#aaa;padding:4px 0">Sin registros</p>';
+
+  const wP='<div class="week-picker">'+[1,2,3].map(function(s){
+    return '<button class="week-pick-btn s'+s+' '+(p.semanas.includes(s)?'on':'')+'" onclick="togglePlayerWeek(\''+p.id+'\','+s+')">Semana '+s+'</button>';
+  }).join('')+'</div>';
+
+  const ausC=st==='ausente'?'action-btn warn':'action-btn';
+  const ausL=st==='ausente'?'Quitar aviso':'No vendr\u00e1';
+  const swC=p.soloPorSuCuenta?'solo-switch on':'solo-switch off';
+  const pid=p.id;
+
+  document.getElementById('sheet-player-content').innerHTML=
+    '<div class="action-grid">'+
+      '<button class="action-btn primary" onclick="markPlayer(\'entrada\',false)"><i class="ti ti-login ab-icon"></i><span class="ab-label">Entrada QR</span><span class="ab-sub">registrar llegada</span></button>'+
+      '<button class="action-btn danger" onclick="markPlayer(\'salida\',false)"><i class="ti ti-logout ab-icon"></i><span class="ab-label">Salida QR</span><span class="ab-sub">registrar salida</span></button>'+
+      '<button class="action-btn" onclick="markPlayer(\'entrada\',true)"><i class="ti ti-pencil ab-icon"></i><span class="ab-label">Entrada manual</span><span class="ab-sub">sin pulsera</span></button>'+
+      '<button class="'+ausC+'" id="btn-ausente"><i class="ti ti-calendar-off ab-icon"></i><span class="ab-label">'+ausL+'</span><span class="ab-sub">padre avis\u00f3</span></button>'+
+    '</div>'+
+    '<div class="solo-toggle" id="btn-solo">'+
+      '<span class="solo-toggle-label"><i class="ti ti-walk" style="font-size:18px;color:#1565c0"></i>Sale solo/a <span style="font-size:11px;color:#888;margin-left:4px">(no viene a recogerle)</span></span>'+
+      '<button class="'+swC+'" aria-label="Toggle sale solo"></button>'+
+    '</div>'+
+    (st==='ausente'?'<div style="padding:0 18px 10px"><div style="background:#f3e8ff;border-radius:9px;padding:10px 12px;font-size:12px;color:#7b3fb5"><strong>Motivo:</strong> '+(getStatus(p.id,w).ausente_motivo||'Sin especificar')+'</div></div>':'')+
+    '<div class="section-label">Historial &mdash; Semana '+w+'</div>'+
+    '<div class="timeline">'+logH+'</div>'+
+    '<div class="section-label" style="margin-top:8px">Semanas inscritas</div>'+
+    '<div style="padding:4px 18px 8px">'+wP+'</div>'+
+    authBadges(p)+
+    '<div class="section-label">Datos</div>'+
+    '<div style="padding:4px 18px 6px;display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
+      '<div style="background:#f7f9f7;border-radius:8px;padding:8px 10px;font-size:12px"><span style="color:#888;display:block;font-size:10px;text-transform:uppercase;margin-bottom:2px">Camiseta</span><strong>'+p.talla+'</strong></div>'+
+      '<div style="background:#f7f9f7;border-radius:8px;padding:8px 10px;font-size:12px"><span style="color:#888;display:block;font-size:10px;text-transform:uppercase;margin-bottom:2px">Pantal\u00f3n</span><strong>'+p.pantalon+'</strong></div>'+
+    '</div>'+
+    '<div class="field-row"><label>Talla camiseta</label><input type="text" id="f-talla" value="'+p.talla+'"/></div>'+
+    '<div class="field-row"><label>Talla pantal\u00f3n</label><input type="text" id="f-pantalon" value="'+p.pantalon+'"/></div>'+
+    '<div class="field-row"><label><i class="ti ti-alert-circle" style="font-size:12px;vertical-align:-1px;color:#e67e22"></i> Alergias</label><input type="text" id="f-alergias" value="'+p.alergias+'"/></div>'+
+    '<div class="field-row"><label><i class="ti ti-phone" style="font-size:12px;vertical-align:-1px"></i> Tel\u00e9fono</label><input type="tel" id="f-tel" value="'+p.tel+'"/></div>'+
+    '<div class="field-row"><label><i class="ti ti-mail" style="font-size:12px;vertical-align:-1px"></i> Email</label><input type="email" id="f-email" value="'+p.email+'"/></div>'+
+    '<div class="field-row"><label><i class="ti ti-notes" style="font-size:12px;vertical-align:-1px"></i> Notas</label><textarea id="f-nota">'+p.nota+'</textarea></div>'+
+    '<button class="save-btn" id="save-btn" onclick="savePlayerData()"><i class="ti ti-device-floppy" style="font-size:14px;margin-right:6px;vertical-align:-2px"></i>Guardar cambios</button>'+
+    '<button class="delete-btn" id="btn-delete"><i class="ti ti-trash" style="font-size:14px;margin-right:5px;vertical-align:-2px"></i>Eliminar jugador</button>'+
+    '<button class="close-btn" onclick="closePlayer()" style="margin-top:8px">Cerrar</button>'+
+    '<div style="height:14px"></div>';
+
+  // Attach event listeners using addEventListener (no inline onclick with dynamic IDs)
+  document.getElementById('btn-ausente').addEventListener('click',function(){toggleAusente(pid)});
+  document.getElementById('btn-solo').addEventListener('click',function(){toggleSolo(pid)});
+  document.getElementById('btn-delete').addEventListener('click',function(){confirmDelete(pid)});
+}
+
+async function markPlayer(type,manual){
+  const p=state.players.find(x=>x.id===state.activePlayer);if(!p)return;
+  const w=state.week,ns=type==='entrada'?'dentro':'fuera';
+  state.statuses[sKey(p.id,w)]={...(state.statuses[sKey(p.id,w)]||{}),status:ns};render();
+  await Promise.all([sbUpsert('player_status',{player_id:p.id,semana:w,status:ns,updated_at:new Date().toISOString()},'player_id,semana'),sbPost('attendance',{player_id:p.id,semana:w,type,manual,recorded_at:new Date().toISOString()})]);
+  loadPlayerLog(p);showToast((type==='entrada'?'&#x2713; Entrada':'&#x2717; Salida')+' &mdash; '+p.name);
+}
+
+async function toggleAusente(id){
+  const p=state.players.find(x=>x.id===id);if(!p)return;
+  const w=state.week,cur=getStatus(p.id,w);
+  if(cur.status==='ausente'){
+    await sbUpsert('player_status',{player_id:p.id,semana:w,status:'pendiente',ausente_motivo:'',updated_at:new Date().toISOString()},'player_id,semana');
+    state.statuses[sKey(p.id,w)]={...cur,status:'pendiente',ausente_motivo:''};
+    showToast('Aviso eliminado &mdash; '+p.name);
+  }else{
+    const m=prompt('Motivo de la ausencia (opcional):','')||'';
+    await Promise.all([sbUpsert('player_status',{player_id:p.id,semana:w,status:'ausente',ausente_motivo:m,updated_at:new Date().toISOString()},'player_id,semana'),sbPost('attendance',{player_id:p.id,semana:w,type:'ausente',manual:true,recorded_at:new Date().toISOString()})]);
+    state.statuses[sKey(p.id,w)]={...cur,status:'ausente',ausente_motivo:m};
+    showToast('Ausencia avisada &mdash; '+p.name);
+  }
+  renderPlayerSheet(p,[]);loadPlayerLog(p);render();
+}
+
+async function toggleSolo(id){
+  const p=state.players.find(x=>x.id===id);if(!p)return;
+  p.soloPorSuCuenta=!p.soloPorSuCuenta;
+  await sbPatch('players',{id:p.id},{solo_por_su_cuenta:p.soloPorSuCuenta});
+  renderPlayerSheet(p,[]);loadPlayerLog(p);render();
+  showToast(p.soloPorSuCuenta?p.name+' &mdash; sale solo/a':p.name+' &mdash; recogida por familia');
+}
+
+async function togglePlayerWeek(id,w){
+  const p=state.players.find(x=>x.id===id);if(!p)return;
+  if(p.semanas.includes(w))p.semanas=p.semanas.filter(s=>s!==w);else p.semanas.push(w);
+  p.semanas.sort((a,b)=>a-b);
+  await sbPatch('players',{id:p.id},{semanas:p.semanas});
+  renderPlayerSheet(p,[]);loadPlayerLog(p);render();
+}
+
+async function savePlayerData(){
+  const p=state.players.find(x=>x.id===state.activePlayer);if(!p)return;
+  p.talla=document.getElementById('f-talla').value.trim();
+  p.pantalon=document.getElementById('f-pantalon').value.trim();
+  p.alergias=document.getElementById('f-alergias').value.trim();
+  p.tel=document.getElementById('f-tel').value.trim();
+  p.email=document.getElementById('f-email').value.trim();
+  p.nota=document.getElementById('f-nota').value.trim();
+  await sbPatch('players',{id:p.id},{talla:p.talla,pantalon:p.pantalon,alergias:p.alergias,tel:p.tel,email:p.email,nota:p.nota});
+  render();
+  const btn=document.getElementById('save-btn');
+  btn.innerHTML='<i class="ti ti-check" style="font-size:14px;margin-right:6px;vertical-align:-2px"></i>&#x00A1;Guardado!';
+  btn.style.background='#2e7d32';
+  setTimeout(()=>{btn.innerHTML='<i class="ti ti-device-floppy" style="font-size:14px;margin-right:6px;vertical-align:-2px"></i>Guardar cambios';btn.style.background='#1a5c2a'},1800);
+}
+
+async function confirmDelete(id){
+  const p=state.players.find(x=>x.id===id);if(!p)return;
+  if(!confirm('&#x00BF;Eliminar a '+p.name+'? Esta acción no se puede deshacer.'))return;
+  await sbDelete('players',{id});
+  state.players=state.players.filter(x=>x.id!==id);
+  closePlayer();render();showToast('Eliminado &mdash; '+p.name);
+}
+
+function closePlayer(){document.getElementById('overlay-player').classList.remove('open');state.activePlayer=null}
+
+function homeScan(){
+  const val=document.getElementById('home-qr-input').value.trim();
+  const res=document.getElementById('home-scan-result');
+  if(!val)return;
+  const fid='QR'+pad3(val);
+  const p=state.players.find(x=>x.id===fid);
+  if(!p){res.className='scan-result scan-err';res.innerHTML='Pulsera <strong>'+fid+'</strong> no encontrada.';res.style.display='block';setTimeout(()=>{res.style.display='none'},3500);return}
+  const w=state.week;
+  if(!p.semanas.includes(w)){res.className='scan-result scan-warn';res.innerHTML='<strong>'+p.name+'</strong> no está en Semana '+w+'.<br><span style="font-size:11px">Semanas: '+p.semanas.map(s=>'S'+s).join(', ')+'</span>';res.style.display='block';setTimeout(()=>{res.style.display='none'},4000);return}
+  const cur=getStatus(p.id,w);
+  if(cur.status==='ausente'){res.className='scan-result scan-warn';res.innerHTML='<strong>'+p.name+'</strong> marcado/a como ausente.<br><button onclick=\"forceEntry(\'+p.id+\')\" style="margin-top:6px;padding:6px 14px;background:#1a5c2a;color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">Sí, registrar entrada</button>';res.style.display='block';return}
+  const action=cur.status!=='dentro'?'entrada':'salida';
+  state.statuses[sKey(p.id,w)]={...cur,status:action==='entrada'?'dentro':'fuera'};render();
+  sbUpsert('player_status',{player_id:p.id,semana:w,status:action==='entrada'?'dentro':'fuera',updated_at:new Date().toISOString()},'player_id,semana');
+  sbPost('attendance',{player_id:p.id,semana:w,type:action,manual:false,recorded_at:new Date().toISOString()});
+  const sw=action==='salida'&&p.soloPorSuCuenta?' <span style="background:#e8f4fd;color:#1565c0;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">&#x1F6B6; Sale solo/a</span>':'';
+  res.className='scan-result scan-ok';
+  res.innerHTML='<strong style="font-size:15px">'+(action==='entrada'?'&#x2713;':'&#x2717;')+' '+p.name+'</strong>'+sw+'<br>'+(action==='entrada'?'ENTRADA':'SALIDA')+' &middot; '+nowTime()+' &middot; S'+w;
+  res.style.display='block';
+  document.getElementById('home-qr-input').value='';document.getElementById('home-qr-input').focus();
+  setTimeout(()=>{res.style.display='none'},3500);
+}
+
+async function forceEntry(id){
+  const p=state.players.find(x=>x.id===id);if(!p)return;
+  const w=state.week;
+  state.statuses[sKey(p.id,w)]={...getStatus(p.id,w),status:'dentro'};render();
+  await Promise.all([sbUpsert('player_status',{player_id:p.id,semana:w,status:'dentro',updated_at:new Date().toISOString()},'player_id,semana'),sbPost('attendance',{player_id:p.id,semana:w,type:'entrada',manual:false,recorded_at:new Date().toISOString()})]);
+  const res=document.getElementById('home-scan-result');
+  res.className='scan-result scan-ok';res.innerHTML='<strong>&#x2713; '+p.name+'</strong><br>ENTRADA &middot; '+nowTime()+' &middot; S'+w;
+  document.getElementById('home-qr-input').value='';document.getElementById('home-qr-input').focus();
+  setTimeout(()=>{res.style.display='none'},3000);
+}
+
+function toggleAddWeek(w){const btn=document.getElementById('add-w'+w);if(addWeeksSet.has(w)){addWeeksSet.delete(w);btn.classList.remove('on')}else{addWeeksSet.add(w);btn.classList.add('on')}}
+function openAdd(){addWeeksSet.clear();['add-name','add-talla','add-pantalon','add-alergias','add-tel','add-email'].forEach(id=>{document.getElementById(id).value=''});document.getElementById('add-nota').value='';[1,2,3].forEach(w=>{document.getElementById('add-w'+w).classList.remove('on')});document.getElementById('overlay-add').classList.add('open');setTimeout(()=>document.getElementById('add-name').focus(),200)}
+function closeAdd(){document.getElementById('overlay-add').classList.remove('open')}
+
+async function saveNewPlayer(){
+  const name=document.getElementById('add-name').value.trim();
+  if(!name){showToast('El nombre es obligatorio');return}
+  if(addWeeksSet.size===0){showToast('Selecciona al menos una semana');return}
+  const existing=state.players.map(p=>parseInt(p.id.replace('QR',''))).filter(n=>!isNaN(n));
+  const id='QR'+String(Math.max(0,...existing)+1).padStart(3,'0');
+  const talla=document.getElementById('add-talla').value.trim()||'-';
+  const pantalon=document.getElementById('add-pantalon').value.trim()||talla;
+  const newP={id,name,talla,pantalon,alergias:document.getElementById('add-alergias').value.trim(),tel:document.getElementById('add-tel').value.trim(),email:document.getElementById('add-email').value.trim(),nota:document.getElementById('add-nota').value.trim(),semanas:[...addWeeksSet].sort((a,b)=>a-b),solo_por_su_cuenta:false,aut_playa:null,aut_piscina:null,aut_fotos:null,form_pendiente:true};
+  const res=await sbPost('players',newP);
+  if(Array.isArray(res)&&res[0]){
+    const p=res[0];p.soloPorSuCuenta=p.solo_por_su_cuenta;p.autPlaya=p.aut_playa;p.autPiscina=p.aut_piscina;p.autFotos=p.aut_fotos;p.formPendiente=p.form_pendiente;
+    state.players.push(p);
+    await Promise.all(newP.semanas.map(s=>sbUpsert('player_status',{player_id:id,semana:s,status:'pendiente'},'player_id,semana')));
+  }
+  closeAdd();render();showToast('&#x2713; '+name+' añadido/a &mdash; '+id);
+}
+
+function showToast(msg){const t=document.getElementById('toast');t.innerHTML=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800)}
+function handleOverlayClick(e,id){if(e.target===document.getElementById(id)){if(id==='overlay-player')closePlayer();else closeAdd()}}
+document.getElementById('search-input').addEventListener('input',function(){state.search=this.value;render()});
+document.getElementById('home-qr-input').addEventListener('keydown',function(e){if(e.key==='Enter')homeScan()});
+
+(function(){
+  const scan=new URLSearchParams(window.location.search).get('scan');
+  if(scan)document.getElementById('home-qr-input').value=scan;
+  loadData().then(()=>{if(scan)homeScan()});
+})();
+
+</script>
+</body>
+</html>
