@@ -45,7 +45,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .filter-btn{padding:5px 10px;font-size:11px;border-radius:20px;border:1px solid #d5d8d5;background:transparent;color:#666;cursor:pointer;transition:all .15s;font-family:inherit}
 .filter-btn.active{background:#1a5c2a;color:white;border-color:#1a5c2a}
 .player-list{padding:8px 12px 40px;display:flex;flex-direction:column;gap:5px}
-.player-list}
 .player-card{background:white;border-radius:12px;border:1px solid #e8ebe8;padding:10px 12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px}
 .player-card:active{transform:scale(.99)}
 .player-card.has-note{border-left:3px solid #e67e22}
@@ -259,7 +258,6 @@ function getInitials(n){return n.split(' ').slice(0,2).map(x=>x[0]).join('').toU
 function nowTime(){return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
 function pad3(v){return String(v).padStart(3,'0')}
 
-// Obtener fecha de hoy local en formato YYYY-MM-DD
 function getTodayStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -272,12 +270,24 @@ async function loadData(){
   setConn('wait');
   try{
     const[players,statuses]=await Promise.all([sbGet('players','order=name'),sbGet('player_status','select=*')]);
-    if(!Array.isArray(players))throw new Error('fail');
+    
+    if(!Array.isArray(players) || !Array.isArray(statuses)) {
+      throw new Error('Estructura incorrecta de datos');
+    }
+    
     state.players=players.map(p=>({...p,semanas:p.semanas||[],soloPorSuCuenta:p.solo_por_su_cuenta,autPlaya:p.aut_playa,autPiscina:p.aut_piscina,autFotos:p.aut_fotos,formPendiente:p.form_pendiente}));
     state.statuses={};
-    (statuses||[]).forEach(s=>{state.statuses[sKey(s.player_id,s.fecha)]=s});
-    state.loading=false;setConn('on');render();subscribeRT();
-  }catch(e){setConn('off');showToast('Error al conectar');console.error(e)}
+    statuses.forEach(s=>{state.statuses[sKey(s.player_id,s.fecha)]=s});
+    
+    state.loading=false;
+    setConn('on');
+    render();
+    subscribeRT();
+  }catch(e){
+    setConn('off');
+    showToast('Error al conectar con el servidor');
+    console.error(e);
+  }
 }
 
 function setConn(st){
@@ -399,7 +409,6 @@ function renderPlayerSheet(p,logs){
   const w=state.week,st=getStatus(p.id,w).status;
   const todayStr = getTodayStr();
 
-  // HISTORIAL CON BOTÓN DE BORRAR INDIVIDUAL
   const logH=logs.length?logs.map(function(l){
     const t=new Date(l.recorded_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
     const d=new Date(l.recorded_at).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'});
@@ -431,7 +440,7 @@ function renderPlayerSheet(p,logs){
       '<span class="solo-toggle-label"><i class="ti ti-walk" style="font-size:18px;color:#1565c0"></i>Sale solo/a <span style="font-size:11px;color:#888;margin-left:4px">(no viene a recogerle)</span></span>'+
       '<button class="'+swC+'" aria-label="Toggle sale solo"></button>'+
     '</div>'+
-    '(st==='ausente'?'<div style="padding:0 18px 10px"><div style="background:#f3e8ff;border-radius:9px;padding:10px 12px;font-size:12px;color:#7b3fb5"><strong>Motivo:</strong> '+(state.statuses[sKey(p.id,todayStr)]?.ausente_motivo||'Sin especificar')+'</div></div>':'')+
+    (st==='ausente'?'<div style="padding:0 18px 10px"><div style="background:#f3e8ff;border-radius:9px;padding:10px 12px;font-size:12px;color:#7b3fb5"><strong>Motivo:</strong> '+(state.statuses[sKey(p.id,todayStr)]?.ausente_motivo||'Sin especificar')+'</div></div>':'')+
     '<div class="section-label">Historial (Semana '+w+')</div>'+
     '<div class="timeline">'+logH+'</div>'+
     '<div class="section-label" style="margin-top:8px">Semanas inscritas</div>'+
@@ -458,7 +467,6 @@ function renderPlayerSheet(p,logs){
   document.getElementById('btn-delete').addEventListener('click',function(){confirmDelete(pid)});
 }
 
-// NUEVA FUNCIÓN PARA BORRAR REGISTROS DE ENTRADA/SALIDA Y RECALCULAR EL ESTADO DIARIO
 async function deleteAttendanceLog(logId, playerId) {
   if(!confirm('¿Seguro que quieres eliminar este registro del historial?')) return;
   try {
@@ -488,16 +496,20 @@ async function deleteAttendanceLog(logId, playerId) {
         }
       }
       
-      await sbUpsert('player_status', {
-        player_id: playerId,
-        semana: state.week,
-        fecha: todayStr,
-        status: newStatus,
-        ausente_motivo: motivo,
-        updated_at: new Date().toISOString()
-      }, 'player_id,semana,fecha');
-      
-      state.statuses[sKey(playerId, todayStr)] = { player_id: playerId, semana: state.week, fecha: todayStr, status: newStatus, ausente_motivo: motivo };
+      if(newStatus === 'pendiente') {
+        await sbDelete('player_status', {player_id: playerId, semana: state.week, fecha: todayStr});
+        delete state.statuses[sKey(playerId, todayStr)];
+      } else {
+        await sbUpsert('player_status', {
+          player_id: playerId,
+          semana: state.week,
+          fecha: todayStr,
+          status: newStatus,
+          ausente_motivo: motivo,
+          updated_at: new Date().toISOString()
+        }, 'player_id,semana,fecha');
+        state.statuses[sKey(playerId, todayStr)] = { player_id: playerId, semana: state.week, fecha: todayStr, status: newStatus, ausente_motivo: motivo };
+      }
       
       if(state.activePlayer === playerId) {
         renderPlayerSheet(p, logsArray);
@@ -525,8 +537,8 @@ async function toggleAusente(id){
   const p=state.players.find(x=>x.id===id);if(!p)return;
   const w=state.week,todayStr=getTodayStr(),cur=getStatus(p.id,w);
   if(cur.status==='ausente'){
-    await sbUpsert('player_status',{player_id:p.id,semana:w,fecha:todayStr,status:'pendiente',ausente_motivo:'',updated_at:new Date().toISOString()},'player_id,semana,fecha');
-    state.statuses[sKey(p.id,todayStr)]={...cur,status:'pendiente',ausente_motivo:'',fecha:todayStr};
+    await sbDelete('player_status', {player_id: p.id, semana: w, fecha: todayStr});
+    delete state.statuses[sKey(p.id,todayStr)];
     showToast('Aviso eliminado &mdash; '+p.name);
   }else{
     const m=prompt('Motivo de la ausencia (opcional):','')||'';
