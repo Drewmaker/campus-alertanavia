@@ -313,8 +313,9 @@ function updateStats(){
 function filteredPlayers(){
   const w=state.week;
   let list=state.players.filter(p=>p.semanas.includes(w));
-  const q=state.search.toLowerCase().trim();
-  if(q)list=list.filter(p=>p.name.toLowerCase().includes(q)||p.id.toLowerCase().includes(q));
+const normalizeStr = (str) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const q = normalizeStr(state.search.trim());
+if(q) list = list.filter(p => normalizeStr(p.name).includes(q) || normalizeStr(p.id).includes(q));
   if(state.filter==='dentro')list=list.filter(p=>getStatus(p.id,w).status==='dentro');
   else if(state.filter==='fuera')list=list.filter(p=>getStatus(p.id,w).status==='fuera');
   else if(state.filter==='pendiente')list=list.filter(p=>getStatus(p.id,w).status==='pendiente');
@@ -344,8 +345,8 @@ function render(){
     const pendT=p.formPendiente?'<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:#fff8e1;color:#b7680a;font-weight:600">&#x23F3;</span>':'';
     const soloT=p.soloPorSuCuenta?'<span class="solo-badge"><i class="ti ti-walk" style="font-size:11px"></i>Sale solo</span>':'';
     const wTags='<span class="week-tags">'+p.semanas.map(s=>'<span class="week-tag wt'+s+'">S'+s+'</span>').join('')+'</span>';
-    return '<div class="player-card '+border+'" onclick=\"openPlayer(\'+p.id+\')\">'+
-      '<div class="avatar '+avC+'">'+getInitials(p.name)+'</div>'+
+return '<div class="player-card ' + border + '" onclick="openPlayer(\'' + p.id + '\')">' +
+  '<div class="avatar '+avC+'">'+getInitials(p.name)+'</div>'+
       '<div class="player-info">'+
         '<div class="player-name">'+p.name+alertI+'</div>'+
         '<div class="player-meta"><span class="qr-id">'+p.id+'</span>'+wTags+alergT+fotosT+pendT+soloT+'</div>'+
