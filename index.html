@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
@@ -46,6 +45,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .filter-btn{padding:5px 10px;font-size:11px;border-radius:20px;border:1px solid #d5d8d5;background:transparent;color:#666;cursor:pointer;transition:all .15s;font-family:inherit}
 .filter-btn.active{background:#1a5c2a;color:white;border-color:#1a5c2a}
 .player-list{padding:8px 12px 40px;display:flex;flex-direction:column;gap:5px}
+.player-list}
 .player-card{background:white;border-radius:12px;border:1px solid #e8ebe8;padding:10px 12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px}
 .player-card:active{transform:scale(.99)}
 .player-card.has-note{border-left:3px solid #e67e22}
@@ -99,7 +99,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .week-pick-btn.s3.on{background:#7b3fb5;color:white;border-color:#7b3fb5}
 .section-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;padding:0 18px 5px;margin-top:6px}
 .timeline{padding:3px 18px 8px;display:flex;flex-direction:column;gap:6px}
-.tl-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.tl-item{display:flex;align-items:center;gap:8px;font-size:12px;width:100%}
 .tl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .tl-in{background:#1a5c2a}
 .tl-out{background:#c0392b}
@@ -107,6 +107,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tl-time{color:#888;font-family:'Courier New',monospace;font-size:11px;min-width:40px}
 .tl-desc{color:#333}
 .tl-tag{font-size:9px;background:#f0f2f0;color:#888;padding:1px 5px;border-radius:4px;margin-left:3px}
+.tl-del-btn{background:none;border:none;color:#c0392b;cursor:pointer;margin-left:auto;padding:4px 8px;display:flex;align-items:center;justify-content:center;border-radius:4px;transition:background .15s}
+.tl-del-btn:hover{background:#fdecea}
 .field-row{padding:5px 18px;display:flex;flex-direction:column;gap:3px}
 .field-row label{font-size:11px;color:#888;font-weight:500}
 .field-row input,.field-row textarea,.field-row select{width:100%;padding:9px 11px;font-size:14px;border:1px solid #d5d8d5;border-radius:9px;background:#f7f9f7;color:#111;font-family:inherit;resize:none;outline:none;transition:border-color .15s}
@@ -241,7 +243,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="toast" id="toast"></div>
 
 <script>
-
 const SUPABASE_URL='https://yjjyklmbhddcmphcygdu.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqanlrbG1iaGRkY21waGN5Z2R1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NTYwODUsImV4cCI6MjA5ODAzMjA4NX0.mCZHQYGPrhPeLIoAhI13zrLNCasb6IDEbUhFsuTZ2aE';
 
@@ -257,8 +258,15 @@ const addWeeksSet=new Set();
 function getInitials(n){return n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function nowTime(){return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}
 function pad3(v){return String(v).padStart(3,'0')}
-function sKey(pid,sem){return pid+'_'+sem}
-function getStatus(pid,sem){return state.statuses[sKey(pid,sem)]||{status:'pendiente',ausente_motivo:''}}
+
+// Obtener fecha de hoy local en formato YYYY-MM-DD
+function getTodayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function sKey(pid,fecha){return pid+'_'+fecha}
+function getStatus(pid,sem){return state.statuses[sKey(pid,getTodayStr())]||{status:'pendiente',ausente_motivo:''}}
 
 async function loadData(){
   setConn('wait');
@@ -267,7 +275,7 @@ async function loadData(){
     if(!Array.isArray(players))throw new Error('fail');
     state.players=players.map(p=>({...p,semanas:p.semanas||[],soloPorSuCuenta:p.solo_por_su_cuenta,autPlaya:p.aut_playa,autPiscina:p.aut_piscina,autFotos:p.aut_fotos,formPendiente:p.form_pendiente}));
     state.statuses={};
-    (statuses||[]).forEach(s=>{state.statuses[sKey(s.player_id,s.semana)]=s});
+    (statuses||[]).forEach(s=>{state.statuses[sKey(s.player_id,s.fecha)]=s});
     state.loading=false;setConn('on');render();subscribeRT();
   }catch(e){setConn('off');showToast('Error al conectar');console.error(e)}
 }
@@ -290,7 +298,7 @@ function subscribeRT(){
       const msg=JSON.parse(e.data);
       if((msg.event==='INSERT'||msg.event==='UPDATE')&&msg.topic.includes('player_status')){
         const rec=msg.payload?.record;
-        if(rec){state.statuses[sKey(rec.player_id,rec.semana)]=rec;render();}
+        if(rec){state.statuses[sKey(rec.player_id,rec.fecha)]=rec;render();}
       }
     };
     ws.onerror=()=>setConn('off');
@@ -313,9 +321,11 @@ function updateStats(){
 function filteredPlayers(){
   const w=state.week;
   let list=state.players.filter(p=>p.semanas.includes(w));
-const normalizeStr = (str) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-const q = normalizeStr(state.search.trim());
-if(q) list = list.filter(p => normalizeStr(p.name).includes(q) || normalizeStr(p.id).includes(q));
+  
+  const normalizeStr = (str) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const q = normalizeStr(state.search.trim());
+  if(q) list = list.filter(p => normalizeStr(p.name).includes(q) || normalizeStr(p.id).includes(q));
+
   if(state.filter==='dentro')list=list.filter(p=>getStatus(p.id,w).status==='dentro');
   else if(state.filter==='fuera')list=list.filter(p=>getStatus(p.id,w).status==='fuera');
   else if(state.filter==='pendiente')list=list.filter(p=>getStatus(p.id,w).status==='pendiente');
@@ -345,8 +355,8 @@ function render(){
     const pendT=p.formPendiente?'<span style="font-size:10px;padding:1px 5px;border-radius:8px;background:#fff8e1;color:#b7680a;font-weight:600">&#x23F3;</span>':'';
     const soloT=p.soloPorSuCuenta?'<span class="solo-badge"><i class="ti ti-walk" style="font-size:11px"></i>Sale solo</span>':'';
     const wTags='<span class="week-tags">'+p.semanas.map(s=>'<span class="week-tag wt'+s+'">S'+s+'</span>').join('')+'</span>';
-return '<div class="player-card ' + border + '" onclick="openPlayer(\'' + p.id + '\')">' +
-  '<div class="avatar '+avC+'">'+getInitials(p.name)+'</div>'+
+    return '<div class="player-card ' + border + '" onclick="openPlayer(\'' + p.id + '\')">' +
+      '<div class="avatar '+avC+'">'+getInitials(p.name)+'</div>'+
       '<div class="player-info">'+
         '<div class="player-name">'+p.name+alertI+'</div>'+
         '<div class="player-meta"><span class="qr-id">'+p.id+'</span>'+wTags+alergT+fotosT+pendT+soloT+'</div>'+
@@ -387,9 +397,18 @@ function authBadges(p){
 
 function renderPlayerSheet(p,logs){
   const w=state.week,st=getStatus(p.id,w).status;
+  const todayStr = getTodayStr();
+
+  // HISTORIAL CON BOTÓN DE BORRAR INDIVIDUAL
   const logH=logs.length?logs.map(function(l){
     const t=new Date(l.recorded_at).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-    return '<div class="tl-item"><div class="tl-dot '+(l.type==='entrada'?'tl-in':l.type==='salida'?'tl-out':'tl-abs')+'"></div><span class="tl-time">'+t+'</span><span class="tl-desc">'+(l.type==='entrada'?'Entrada':l.type==='salida'?'Salida':'Ausencia')+'</span><span class="tl-tag">'+(l.manual?'manual':'QR')+'</span></div>';
+    const d=new Date(l.recorded_at).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'});
+    return '<div class="tl-item"><div class="tl-dot '+(l.type==='entrada'?'tl-in':l.type==='salida'?'tl-out':'tl-abs')+'"></div>' +
+      '<span class="tl-time">'+d+' '+t+'</span>' +
+      '<span class="tl-desc">'+(l.type==='entrada'?'Entrada':l.type==='salida'?'Salida':'Ausencia')+'</span>' +
+      '<span class="tl-tag">'+(l.manual?'man':'QR')+'</span>' +
+      '<button class="tl-del-btn" onclick="deleteAttendanceLog('+l.id+',\''+p.id+'\')" title="Borrar registro"><i class="ti ti-trash" style="font-size:13px"></i></button>' +
+      '</div>';
   }).join(''):'<p style="font-size:12px;color:#aaa;padding:4px 0">Sin registros</p>';
 
   const wP='<div class="week-picker">'+[1,2,3].map(function(s){
@@ -412,8 +431,8 @@ function renderPlayerSheet(p,logs){
       '<span class="solo-toggle-label"><i class="ti ti-walk" style="font-size:18px;color:#1565c0"></i>Sale solo/a <span style="font-size:11px;color:#888;margin-left:4px">(no viene a recogerle)</span></span>'+
       '<button class="'+swC+'" aria-label="Toggle sale solo"></button>'+
     '</div>'+
-    (st==='ausente'?'<div style="padding:0 18px 10px"><div style="background:#f3e8ff;border-radius:9px;padding:10px 12px;font-size:12px;color:#7b3fb5"><strong>Motivo:</strong> '+(getStatus(p.id,w).ausente_motivo||'Sin especificar')+'</div></div>':'')+
-    '<div class="section-label">Historial &mdash; Semana '+w+'</div>'+
+    '(st==='ausente'?'<div style="padding:0 18px 10px"><div style="background:#f3e8ff;border-radius:9px;padding:10px 12px;font-size:12px;color:#7b3fb5"><strong>Motivo:</strong> '+(state.statuses[sKey(p.id,todayStr)]?.ausente_motivo||'Sin especificar')+'</div></div>':'')+
+    '<div class="section-label">Historial (Semana '+w+')</div>'+
     '<div class="timeline">'+logH+'</div>'+
     '<div class="section-label" style="margin-top:8px">Semanas inscritas</div>'+
     '<div style="padding:4px 18px 8px">'+wP+'</div>'+
@@ -434,31 +453,88 @@ function renderPlayerSheet(p,logs){
     '<button class="close-btn" onclick="closePlayer()" style="margin-top:8px">Cerrar</button>'+
     '<div style="height:14px"></div>';
 
-  // Attach event listeners using addEventListener (no inline onclick with dynamic IDs)
   document.getElementById('btn-ausente').addEventListener('click',function(){toggleAusente(pid)});
   document.getElementById('btn-solo').addEventListener('click',function(){toggleSolo(pid)});
   document.getElementById('btn-delete').addEventListener('click',function(){confirmDelete(pid)});
 }
 
+// NUEVA FUNCIÓN PARA BORRAR REGISTROS DE ENTRADA/SALIDA Y RECALCULAR EL ESTADO DIARIO
+async function deleteAttendanceLog(logId, playerId) {
+  if(!confirm('¿Seguro que quieres eliminar este registro del historial?')) return;
+  try {
+    await sbDelete('attendance', {id: logId});
+    showToast('Registro eliminado con éxito');
+    
+    const p = state.players.find(x => x.id === playerId);
+    if(p) {
+      const logs = await sbGet('attendance','player_id=eq.'+p.id+'&semana=eq.'+state.week+'&order=recorded_at.desc&limit=20');
+      const logsArray = Array.isArray(logs) ? logs : [];
+      
+      const todayStr = getTodayStr();
+      const todayLogs = logsArray.filter(l => {
+        const logDate = new Date(l.recorded_at);
+        const logDateStr = logDate.getFullYear() + '-' + String(logDate.getMonth() + 1).padStart(2, '0') + '-' + String(logDate.getDate()).padStart(2, '0');
+        return logDateStr === todayStr;
+      });
+      
+      let newStatus = 'pendiente';
+      let motivo = '';
+      
+      if(todayLogs.length > 0) {
+        const latest = todayLogs[0];
+        newStatus = latest.type === 'entrada' ? 'dentro' : latest.type === 'salida' ? 'fuera' : 'ausente';
+        if(latest.type === 'ausente') {
+          motivo = state.statuses[sKey(playerId, todayStr)]?.ausente_motivo || '';
+        }
+      }
+      
+      await sbUpsert('player_status', {
+        player_id: playerId,
+        semana: state.week,
+        fecha: todayStr,
+        status: newStatus,
+        ausente_motivo: motivo,
+        updated_at: new Date().toISOString()
+      }, 'player_id,semana,fecha');
+      
+      state.statuses[sKey(playerId, todayStr)] = { player_id: playerId, semana: state.week, fecha: todayStr, status: newStatus, ausente_motivo: motivo };
+      
+      if(state.activePlayer === playerId) {
+        renderPlayerSheet(p, logsArray);
+      }
+      render();
+    }
+  } catch(e) {
+    console.error(e);
+    showToast('Error al borrar el registro');
+  }
+}
+
 async function markPlayer(type,manual){
   const p=state.players.find(x=>x.id===state.activePlayer);if(!p)return;
-  const w=state.week,ns=type==='entrada'?'dentro':'fuera';
-  state.statuses[sKey(p.id,w)]={...(state.statuses[sKey(p.id,w)]||{}),status:ns};render();
-  await Promise.all([sbUpsert('player_status',{player_id:p.id,semana:w,status:ns,updated_at:new Date().toISOString()},'player_id,semana'),sbPost('attendance',{player_id:p.id,semana:w,type,manual,recorded_at:new Date().toISOString()})]);
+  const w=state.week,ns=type==='entrada'?'dentro':'fuera',todayStr=getTodayStr();
+  state.statuses[sKey(p.id,todayStr)]={...(state.statuses[sKey(p.id,todayStr)]||{}),status:ns,fecha:todayStr,semana:w};render();
+  await Promise.all([
+    sbUpsert('player_status',{player_id:p.id,semana:w,fecha:todayStr,status:ns,updated_at:new Date().toISOString()},'player_id,semana,fecha'),
+    sbPost('attendance',{player_id:p.id,semana:w,type,manual,recorded_at:new Date().toISOString()})
+  ]);
   loadPlayerLog(p);showToast((type==='entrada'?'&#x2713; Entrada':'&#x2717; Salida')+' &mdash; '+p.name);
 }
 
 async function toggleAusente(id){
   const p=state.players.find(x=>x.id===id);if(!p)return;
-  const w=state.week,cur=getStatus(p.id,w);
+  const w=state.week,todayStr=getTodayStr(),cur=getStatus(p.id,w);
   if(cur.status==='ausente'){
-    await sbUpsert('player_status',{player_id:p.id,semana:w,status:'pendiente',ausente_motivo:'',updated_at:new Date().toISOString()},'player_id,semana');
-    state.statuses[sKey(p.id,w)]={...cur,status:'pendiente',ausente_motivo:''};
+    await sbUpsert('player_status',{player_id:p.id,semana:w,fecha:todayStr,status:'pendiente',ausente_motivo:'',updated_at:new Date().toISOString()},'player_id,semana,fecha');
+    state.statuses[sKey(p.id,todayStr)]={...cur,status:'pendiente',ausente_motivo:'',fecha:todayStr};
     showToast('Aviso eliminado &mdash; '+p.name);
   }else{
     const m=prompt('Motivo de la ausencia (opcional):','')||'';
-    await Promise.all([sbUpsert('player_status',{player_id:p.id,semana:w,status:'ausente',ausente_motivo:m,updated_at:new Date().toISOString()},'player_id,semana'),sbPost('attendance',{player_id:p.id,semana:w,type:'ausente',manual:true,recorded_at:new Date().toISOString()})]);
-    state.statuses[sKey(p.id,w)]={...cur,status:'ausente',ausente_motivo:m};
+    await Promise.all([
+      sbUpsert('player_status',{player_id:p.id,semana:w,fecha:todayStr,status:'ausente',ausente_motivo:m,updated_at:new Date().toISOString()},'player_id,semana,fecha'),
+      sbPost('attendance',{player_id:p.id,semana:w,type:'ausente',manual:true,recorded_at:new Date().toISOString()})
+    ]);
+    state.statuses[sKey(p.id,todayStr)]={...cur,status:'ausente',ausente_motivo:m,fecha:todayStr};
     showToast('Ausencia avisada &mdash; '+p.name);
   }
   renderPlayerSheet(p,[]);loadPlayerLog(p);render();
@@ -513,13 +589,13 @@ function homeScan(){
   const fid='QR'+pad3(val);
   const p=state.players.find(x=>x.id===fid);
   if(!p){res.className='scan-result scan-err';res.innerHTML='Pulsera <strong>'+fid+'</strong> no encontrada.';res.style.display='block';setTimeout(()=>{res.style.display='none'},3500);return}
-  const w=state.week;
+  const w=state.week,todayStr=getTodayStr();
   if(!p.semanas.includes(w)){res.className='scan-result scan-warn';res.innerHTML='<strong>'+p.name+'</strong> no está en Semana '+w+'.<br><span style="font-size:11px">Semanas: '+p.semanas.map(s=>'S'+s).join(', ')+'</span>';res.style.display='block';setTimeout(()=>{res.style.display='none'},4000);return}
   const cur=getStatus(p.id,w);
-  if(cur.status==='ausente'){res.className='scan-result scan-warn';res.innerHTML='<strong>'+p.name+'</strong> marcado/a como ausente.<br><button onclick=\"forceEntry(\'+p.id+\')\" style="margin-top:6px;padding:6px 14px;background:#1a5c2a;color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">Sí, registrar entrada</button>';res.style.display='block';return}
+  if(cur.status==='ausente'){res.className='scan-result scan-warn';res.innerHTML='<strong>'+p.name+'</strong> marcado/a como ausente.<br><button onclick="forceEntry(\''+p.id+'\')" style="margin-top:6px;padding:6px 14px;background:#1a5c2a;color:white;border:none;border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit">Sí, registrar entrada</button>';res.style.display='block';return}
   const action=cur.status!=='dentro'?'entrada':'salida';
-  state.statuses[sKey(p.id,w)]={...cur,status:action==='entrada'?'dentro':'fuera'};render();
-  sbUpsert('player_status',{player_id:p.id,semana:w,status:action==='entrada'?'dentro':'fuera',updated_at:new Date().toISOString()},'player_id,semana');
+  state.statuses[sKey(p.id,todayStr)]={...cur,status:action==='entrada'?'dentro':'fuera',fecha:todayStr,semana:w};render();
+  sbUpsert('player_status',{player_id:p.id,semana:w,fecha:todayStr,status:action==='entrada'?'dentro':'fuera',updated_at:new Date().toISOString()},'player_id,semana,fecha');
   sbPost('attendance',{player_id:p.id,semana:w,type:action,manual:false,recorded_at:new Date().toISOString()});
   const sw=action==='salida'&&p.soloPorSuCuenta?' <span style="background:#e8f4fd;color:#1565c0;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">&#x1F6B6; Sale solo/a</span>':'';
   res.className='scan-result scan-ok';
@@ -531,9 +607,12 @@ function homeScan(){
 
 async function forceEntry(id){
   const p=state.players.find(x=>x.id===id);if(!p)return;
-  const w=state.week;
-  state.statuses[sKey(p.id,w)]={...getStatus(p.id,w),status:'dentro'};render();
-  await Promise.all([sbUpsert('player_status',{player_id:p.id,semana:w,status:'dentro',updated_at:new Date().toISOString()},'player_id,semana'),sbPost('attendance',{player_id:p.id,semana:w,type:'entrada',manual:false,recorded_at:new Date().toISOString()})]);
+  const w=state.week,todayStr=getTodayStr();
+  state.statuses[sKey(p.id,todayStr)]={...getStatus(p.id,w),status:'dentro',fecha:todayStr,semana:w};render();
+  await Promise.all([
+    sbUpsert('player_status',{player_id:p.id,semana:w,fecha:todayStr,status:'dentro',updated_at:new Date().toISOString()},'player_id,semana,fecha'),
+    sbPost('attendance',{player_id:p.id,semana:w,type:'entrada',manual:false,recorded_at:new Date().toISOString()})
+  ]);
   const res=document.getElementById('home-scan-result');
   res.className='scan-result scan-ok';res.innerHTML='<strong>&#x2713; '+p.name+'</strong><br>ENTRADA &middot; '+nowTime()+' &middot; S'+w;
   document.getElementById('home-qr-input').value='';document.getElementById('home-qr-input').focus();
@@ -557,7 +636,6 @@ async function saveNewPlayer(){
   if(Array.isArray(res)&&res[0]){
     const p=res[0];p.soloPorSuCuenta=p.solo_por_su_cuenta;p.autPlaya=p.aut_playa;p.autPiscina=p.aut_piscina;p.autFotos=p.aut_fotos;p.formPendiente=p.form_pendiente;
     state.players.push(p);
-    await Promise.all(newP.semanas.map(s=>sbUpsert('player_status',{player_id:id,semana:s,status:'pendiente'},'player_id,semana')));
   }
   closeAdd();render();showToast('&#x2713; '+name+' añadido/a &mdash; '+id);
 }
@@ -572,7 +650,6 @@ document.getElementById('home-qr-input').addEventListener('keydown',function(e){
   if(scan)document.getElementById('home-qr-input').value=scan;
   loadData().then(()=>{if(scan)homeScan()});
 })();
-
 </script>
 </body>
 </html>
